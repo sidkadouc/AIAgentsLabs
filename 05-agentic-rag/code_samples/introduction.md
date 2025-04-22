@@ -1,7 +1,3 @@
-[![Agentic RAG](./images/lesson-5-thumbnail.png)](https://youtu.be/WcjAARvdL7I?si=BCgwjwFb2yCkEhR9)
-
-> _(Click the image above to view video of this lesson)_
-
 # Agentic RAG
 
 This lesson provides a comprehensive overview of Agentic Retrieval-Augmented Generation (Agentic RAG), an emerging AI paradigm where large language models (LLMs) autonomously plan their next steps while pulling information from external sources. Unlike static retrieval-then-read patterns, Agentic RAG involves iterative calls to the LLM, interspersed with tool or function calls and structured outputs. The system evaluates results, refines queries, invokes additional tools if needed, and continues this cycle until a satisfactory solution is achieved.
@@ -40,7 +36,7 @@ Agentic Retrieval-Augmented Generation (Agentic RAG) is an emerging paradigm in 
 
 This iterative “maker-checker” style of operation is designed to improve correctness, handle malformed queries to structured databases (e.g. NL2SQL), and ensure balanced, high-quality results. Rather than relying solely on carefully engineered prompt chains, the system actively owns its reasoning process. It can rewrite queries that fail, choose different retrieval methods, and integrate multiple tools—such as vector search in Azure AI Search, SQL databases, or custom APIs—before finalizing its answer. This removes the need for overly complex orchestration frameworks. Instead, a relatively simple loop of “LLM call → tool use → LLM call → …” can yield sophisticated and well-grounded outputs.
 
-![Agentic RAG Core Loop](./images/agentic-rag-core-loop.png)
+![Agentic RAG Core Loop](../images/agentic-rag-core-loop.png)
 
 ## Owning the Reasoning Process
 
@@ -57,7 +53,7 @@ All of these steps—refining queries, choosing sources, iterating until “happ
 
 ## Iterative Loops, Tool Integration, and Memory
 
-![Tool Integration Architecture](./images/tool-integration.png)
+![Tool Integration Architecture](../images/tool-integration.png)
 
 An agentic system relies on a looped interaction pattern:
 
@@ -79,7 +75,7 @@ Agentic RAG’s autonomy also involves robust self-correction mechanisms. When t
 
 This iterative and dynamic approach allows the model to improve continuously, ensuring that it’s not just a one-shot system but one that learns from its missteps during a given session.
 
-![Self Correction Mechanism](./images/self-correction.png)
+![Self Correction Mechanism](../images/self-correction.png)
 
 ## Boundaries of Agency
 
@@ -108,9 +104,9 @@ As these systems become more autonomous in their reasoning, governance and trans
 
 Having tools that provide a clear record of actions is essential. Without them, debugging a multi-step process can be very difficult. See the following example from Literal AI (company behind Chainlit) for an Agent run:
 
-![AgentRunExample](./images/AgentRunExample.png)
+![AgentRunExample](../images/AgentRunExample.png)
 
-![AgentRunExample2](./images/AgentRunExample2.png)
+![AgentRunExample2](../images/AgentRunExample2.png)
 
 ## Conclusion
 
@@ -134,11 +130,3 @@ Agentic RAG represents a natural evolution in how AI systems handle complex, dat
 - <a href="https://arxiv.org/abs/2303.11366" target="_blank">2303.11366 Reflexion: Language Agents with Verbal Reinforcement Learning</a>
 - <a href="https://arxiv.org/abs/2305.11738" target="_blank">2305.11738 CRITIC: Large Language Models Can Self-Correct with Tool-Interactive Critiquing</a>
 - <a href="https://arxiv.org/abs/2501.09136" target="_blank">2501.09136 Agentic Retrieval-Augmented Generation: A Survey on Agentic RAG</a>
-
-## Previous Lesson
-
-[Tool Use Design Pattern](../04-tool-use/README.md)
-
-## Next Lesson
-
-[Building Trustworthy AI Agents](../06-building-trustworthy-agents/README.md)
