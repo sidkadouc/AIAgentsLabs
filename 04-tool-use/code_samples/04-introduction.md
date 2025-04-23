@@ -1,7 +1,3 @@
-[![How to Design Good AI Agents](./images/lesson-4-thumbnail.png)](https://youtu.be/vieRiPRx-gI?si=cEZ8ApnT6Sus9rhn)
-
-> _(Click the image above to view video of this lesson)_
-
 # Tool Use Design Pattern
 
 Tools are interesting because they allow AI agents to have a broader range of capabilities. Instead of the agent having a limited set of actions it can perform, by adding a tool, the agent can now perform a wide range of actions. In this chapter, we will look at the Tool Use Design Pattern, which describes how AI agents can use specific tools to achieve their goals.
@@ -210,7 +206,7 @@ Here are some examples of how you can implement the Tool Use Design Pattern usin
 
 The following diagram illustrates the process of function calling with Semantic Kernel:
 
-![function calling](./images/functioncalling-diagram.png)
+![function calling](../images/functioncalling-diagram.png)
 
 In Semantic Kernel functions/tools are called <a href="https://learn.microsoft.com/semantic-kernel/concepts/plugins/?pivots=programming-language-python" target="_blank">Plugins</a>. We can convert the `get_current_time` function we saw earlier into a plugin by turning it into a class with the function in it. We can also import the `kernel_function` decorator, which takes in the description of the function. When you then create a kernel with the GetCurrentTimePlugin, the kernel will automatically serialize the function and its parameters, creating the schema to send to the LLM in the process.
 
@@ -271,7 +267,7 @@ Imagine you are a sales agent at a company called Contoso. You want to develop a
 
 The following image illustrates how you could use Azure AI Agent Service to analyze your sales data:
 
-![Agentic Service In Action](./images/agent-service-in-action.jpg)
+![Agentic Service In Action](../images/agent-service-in-action.jpg)
 
 To use any of these tools with the service we can create a client and define a tool or toolset. To implement this practically we can use the following Python code. The LLM will be able to look at the toolset and decide whether to use the user created function, `fetch_sales_data_using_sqlite_query`, or the pre-built Code Interpreter depending on the user request.
 
