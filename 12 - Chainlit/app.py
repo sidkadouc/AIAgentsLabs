@@ -77,7 +77,7 @@ async def on_chat_start():
     
     # Instantiate and add the Chainlit filter to the kernel
     # This will automatically capture function calls as Steps
-    sk_filter = cl.SemanticKernelFilter(kernel=kernel)
+    # sk_filter = cl.SemanticKernelFilter(kernel=kernel)
 
     # Store everything in the session
     cl.user_session.set("kernel", kernel)
@@ -144,7 +144,7 @@ async def handle_group_chat(message: cl.Message, group_chat, front_desk_name: st
     # Display the conversation between agents
     async for content in group_chat.invoke():
         # Skip user message and messages we've already displayed
-        message = content.content
+        message = f"## Agent - {content.name or '*'}: \n '{content.content}'"
            
         # Add this message to displayed set
         displayed_messages.add(message)

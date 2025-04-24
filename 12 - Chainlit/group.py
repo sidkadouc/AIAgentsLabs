@@ -7,11 +7,27 @@ from semantic_kernel.agents.strategies import (
     KernelFunctionSelectionStrategy,
     KernelFunctionTerminationStrategy,
 )
+from semantic_kernel.functions import kernel_function
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.contents import AuthorRole, ChatMessageContent
 from semantic_kernel.functions import KernelFunctionFromPrompt
 
+
+
+class WeatherPlugin:
+    @kernel_function(name="get_weather", description="Gets the weather for a city")
+    def get_weather(self, city: str) -> str:
+        """Retrieves the weather for a given city."""
+        if "paris" in city.lower():
+            return f"The weather in {city} is 20°C and sunny."
+        elif "london" in city.lower():
+            return f"The weather in {city} is 15°C and cloudy."
+        elif "Quebec" in city.lower():
+            return f"The weather in {city} is 5°C and cloudy."
+        else:
+            return f"The weather in {city} is 30°C and cloudy."
+        
 def _create_kernel_with_chat_completion():
     """Create a kernel with chat completion service."""
     # This function should be implemented based on your configuration
@@ -49,6 +65,22 @@ def create_hotel_concierge_group_chat(kernel):
         instructions=FRONTDESK_INSTRUCTIONS,
     )
 
+
+    WEATHER_NAME = "WeatherConditionsAgent"
+    WEATHER_INSTRUCTIONS = """
+    You are a Weather Agent, who provides weather information for a given city.
+    Only provide a single recomendation per response.
+    You're laser focused on the goal at hand.
+    Don't waste time with chit chat.
+    Consider suggestions when refining an idea.
+    """
+    agent_weather = ChatCompletionAgent(
+        kernel=kernel,
+        name=WEATHER_NAME,
+        instructions=WEATHER_INSTRUCTIONS,
+        plugins=[WeatherPlugin()],
+    )
+
     termination_function = KernelFunctionFromPrompt(
         function_name="termination",
         prompt="""
@@ -72,13 +104,18 @@ def create_hotel_concierge_group_chat(kernel):
         State only the name of the participant to take the next turn.
         No participant should take more than one turn in a row.
         
+
+        - {WEATHER_NAME} should only called one time in the conversation.
+        
         Choose only from these participants:
         - {REVIEWER_NAME}
         - {FRONTDESK_NAME}
+       
         
         Always follow these rules when selecting the next participant, each conversation should be at least 4 turns:
-        - After user input, it is {FRONTDESK_NAME}'s turn.
-        - After {FRONTDESK_NAME} replies, it is {REVIEWER_NAME}'s turn.
+        - After user input, it is {WEATHER_NAME}'s turn.
+        - After {WEATHER_NAME} replies, it is {FRONTDESK_NAME}'s turn.
+        - After {FRONTDESK_NAME} provides suggestion, it is {REVIEWER_NAME}'s turn.
         - After {REVIEWER_NAME} provides feedback, it is {FRONTDESK_NAME}'s turn.
 
         History:
@@ -87,7 +124,7 @@ def create_hotel_concierge_group_chat(kernel):
     )
 
     chat = AgentGroupChat(
-        agents=[agent_writer, agent_reviewer],
+        agents=[agent_writer, agent_reviewer,agent_weather],
         termination_strategy=KernelFunctionTerminationStrategy(
             agents=[agent_reviewer],
             function=termination_function,
