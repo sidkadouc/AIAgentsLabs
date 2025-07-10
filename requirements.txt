@@ -1,6 +1,8 @@
 chainlit
-
 azure-ai-projects
 azure-ai-inference
 semantic-kernel[azure]>=1.27.2
 azure-search-documents>=11.5.2
+python-dotenv
+openai
+aiohttp
