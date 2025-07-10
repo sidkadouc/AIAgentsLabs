@@ -59,6 +59,7 @@ async def on_message(message: cl.Message):
         
         # Create a Chainlit message for the response stream
         answer = cl.Message(content="")
+        full_response = ""
         
         # Stream the response using the agent's get_streaming_response method
         async for response_chunk in get_streaming_response(
@@ -67,10 +68,14 @@ async def on_message(message: cl.Message):
             discussion_id=session_id,
             history_memory=history_memory
         ):
-            await answer.stream_token(response_chunk)
+            # Ensure response_chunk is a string
+            if response_chunk:
+                chunk_str = str(response_chunk) if not isinstance(response_chunk, str) else response_chunk
+                await answer.stream_token(chunk_str)
+                full_response += chunk_str
         
         # Add the full assistant response to chat history
-        chat_history.add_assistant_message(answer.content)
+        chat_history.add_assistant_message(full_response)
         
         # Send the final message
         await answer.send()

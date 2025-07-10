@@ -190,8 +190,22 @@ async def get_streaming_response(messages: str, user_id: str = "default_user", d
         
         async for response_chunk in SUPPORT_AGENT.invoke_stream(messages=messages, thread=thread, arguments=arguments):
             if response_chunk.content:
-                # Yield each chunk as it arrives
-                yield response_chunk.content
+                # Ensure we yield a string content
+                content = response_chunk.content
+                try:
+                    if hasattr(content, 'content'):
+                        # If it's a message object with a content attribute, extract it
+                        content = content.content
+                    elif not isinstance(content, str):
+                        # Convert to string if it's not already a string
+                        content = str(content)
+                    
+                    # Yield each chunk as it arrives
+                    yield content
+                except Exception as content_error:
+                    logger.error(f"Error processing content: {content_error}, content type: {type(content)}")
+                    # Fallback to string conversion
+                    yield str(content)
             # Keep track of the thread from the last response chunk
             response_thread = response_chunk.thread
         
