@@ -7,11 +7,11 @@ from semantic_kernel.connectors.ai.prompt_execution_settings import PromptExecut
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
 from semantic_kernel.functions import kernel_function, KernelArguments
 from datetime import datetime
-from .plugins.vector_search_plugin import VectorSearchPlugin
+from vector_search_plugin import VectorSearchPlugin
 from azure.search.documents import SearchClient
 from azure.core.credentials import AzureKeyCredential
 from azure.identity import DefaultAzureCredential
-from .config import config
+from config import config
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ SUPPORT_AGENT = None
 HISTORY_MEMORY = None
 
 # Import our HistoryMemory class
-from .history_memory import HistoryMemory
+from history_memory import HistoryMemory
 
 
 def initialize_agent_and_plugins():
@@ -104,7 +104,7 @@ initialize_agent_and_plugins()
 
 async def get_response(messages: str, user_id: str = "default_user", discussion_id: str = "default_discussion") -> str:
     """
-    Gets a response from the AI assistant using the conversation history.
+    Gets a response from the AI assistant using the conversation history with streaming.
     
     Args:
         messages: The user's message.
@@ -127,19 +127,24 @@ async def get_response(messages: str, user_id: str = "default_user", discussion_
         # Prepare arguments with current timestamp
         arguments = KernelArguments(now=datetime.now().strftime("%Y-%m-%d %H:%M"))
         
-        # Get the response from the agent using the thread
-        response = None
-        async for response_chunk in SUPPORT_AGENT.invoke(messages=messages, thread=thread, arguments=arguments):
-            response = response_chunk
+        # Get the streaming response from the agent using the thread
+        response_content = ""
+        response_thread = None
         
-        if response and response.content:
-            logger.info(f"Generated AI response with thread: {response.content}")
+        async for response_chunk in SUPPORT_AGENT.invoke_stream(messages=messages, thread=thread, arguments=arguments):
+            if response_chunk.content:
+                response_content += response_chunk.content
+            # Keep track of the thread from the last response chunk
+            response_thread = response_chunk.thread
+        
+        if response_content:
+            logger.info(f"Generated AI response with streaming: {response_content}")
             
             # Update the history with the new thread
-            if response.thread:
-                HISTORY_MEMORY.update_history(user_id, discussion_id, response.thread)
+            if response_thread:
+                HISTORY_MEMORY.update_history(user_id, discussion_id, response_thread)
                 
-            return response.content
+            return response_content
         else:
             logger.error("The agent returned an empty response")
             return "Je suis désolé, je n'ai pas pu générer une réponse. Veuillez réessayer."
@@ -147,3 +152,48 @@ async def get_response(messages: str, user_id: str = "default_user", discussion_
     except Exception as e:
         logger.exception(f"Error getting response from agent: {str(e)}")
         raise RuntimeError(f"Error getting response from AI assistant: {str(e)}")
+
+async def get_streaming_response(messages: str, user_id: str = "default_user", discussion_id: str = "default_discussion"):
+    """
+    Gets a streaming response from the AI assistant using the conversation history.
+    This generator yields response chunks as they arrive for real-time streaming in Chainlit.
+    
+    Args:
+        messages: The user's message.
+        user_id: The ID of the user.
+        discussion_id: The ID of the discussion.
+        
+    Yields:
+        Response chunks as they arrive from the AI assistant.
+    """
+    global SUPPORT_AGENT, HISTORY_MEMORY
+    
+    if not SUPPORT_AGENT:
+        logger.error("SUPPORT_AGENT is not initialized")
+        raise RuntimeError("AI assistant is not initialized")
+    
+    try:
+        # Get or create a history thread for this user and discussion
+        thread = HISTORY_MEMORY.get_or_create_history(user_id, discussion_id)
+        
+        # Prepare arguments with current timestamp
+        arguments = KernelArguments(now=datetime.now().strftime("%Y-%m-%d %H:%M"))
+        
+        # Stream the response from the agent using the thread
+        response_thread = None
+        
+        async for response_chunk in SUPPORT_AGENT.invoke_stream(messages=messages, thread=thread, arguments=arguments):
+            if response_chunk.content:
+                # Yield each chunk as it arrives
+                yield response_chunk.content
+            # Keep track of the thread from the last response chunk
+            response_thread = response_chunk.thread
+        
+        # Update the history with the final thread state
+        if response_thread:
+            HISTORY_MEMORY.update_history(user_id, discussion_id, response_thread)
+            logger.info("Updated conversation history after streaming response")
+    
+    except Exception as e:
+        logger.exception(f"Error getting streaming response from agent: {str(e)}")
+        raise RuntimeError(f"Error getting streaming response from AI assistant: {str(e)}")
