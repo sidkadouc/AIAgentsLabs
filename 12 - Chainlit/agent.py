@@ -153,7 +153,7 @@ async def get_response(messages: str, user_id: str = "default_user", discussion_
         logger.exception(f"Error getting response from agent: {str(e)}")
         raise RuntimeError(f"Error getting response from AI assistant: {str(e)}")
 
-async def get_streaming_response(messages: str, user_id: str = "default_user", discussion_id: str = "default_discussion"):
+async def get_streaming_response(messages: str, user_id: str = "default_user", discussion_id: str = "default_discussion", history_memory=None):
     """
     Gets a streaming response from the AI assistant using the conversation history.
     This generator yields response chunks as they arrive for real-time streaming in Chainlit.
@@ -162,6 +162,7 @@ async def get_streaming_response(messages: str, user_id: str = "default_user", d
         messages: The user's message.
         user_id: The ID of the user.
         discussion_id: The ID of the discussion.
+        history_memory: Optional HistoryMemory instance. If None, uses the global HISTORY_MEMORY.
         
     Yields:
         Response chunks as they arrive from the AI assistant.
@@ -173,8 +174,13 @@ async def get_streaming_response(messages: str, user_id: str = "default_user", d
         raise RuntimeError("AI assistant is not initialized")
     
     try:
+        # Use provided history_memory or fall back to global HISTORY_MEMORY
+        memory_instance = history_memory or HISTORY_MEMORY
+        if not memory_instance:
+            raise RuntimeError("No history memory instance available")
+            
         # Get or create a history thread for this user and discussion
-        thread = HISTORY_MEMORY.get_or_create_history(user_id, discussion_id)
+        thread = memory_instance.get_or_create_history(user_id, discussion_id)
         
         # Prepare arguments with current timestamp
         arguments = KernelArguments(now=datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -191,7 +197,7 @@ async def get_streaming_response(messages: str, user_id: str = "default_user", d
         
         # Update the history with the final thread state
         if response_thread:
-            HISTORY_MEMORY.update_history(user_id, discussion_id, response_thread)
+            memory_instance.update_history(user_id, discussion_id, response_thread)
             logger.info("Updated conversation history after streaming response")
     
     except Exception as e:

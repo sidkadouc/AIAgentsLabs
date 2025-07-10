@@ -1,16 +1,8 @@
 import chainlit as cl
 import os
 from dotenv import load_dotenv
-from datetime import datetime
-from agent import SUPPORT_AGENT, AGENT_KERNEL, initialize_agent_and_plugins
+from agent import SUPPORT_AGENT, AGENT_KERNEL, initialize_agent_and_plugins, get_streaming_response
 from history_memory import HistoryMemory
-
-# Import KernelArguments from semantic kernel
-try:
-    from semantic_kernel.functions import KernelArguments
-except ImportError:
-    # Fallback if not available
-    KernelArguments = None
 
 # We'll create a simple ChatHistory class since we need it for Chainlit integration
 class ChatHistory:
@@ -65,31 +57,17 @@ async def on_message(message: cl.Message):
         # Add user message to history
         chat_history.add_user_message(message.content)
         
-        # Get or create a history thread for this user and discussion
-        thread = history_memory.get_or_create_history(user_id, session_id)
-        
         # Create a Chainlit message for the response stream
         answer = cl.Message(content="")
         
-        # Prepare arguments with current timestamp (if KernelArguments is available)
-        arguments = None
-        if KernelArguments:
-            arguments = KernelArguments(now=datetime.now().strftime("%Y-%m-%d %H:%M"))
-        
-        # Stream the response using the agent
-        async for response_chunk in SUPPORT_AGENT.invoke_stream(
+        # Stream the response using the agent's get_streaming_response method
+        async for response_chunk in get_streaming_response(
             messages=message.content, 
-            thread=thread, 
-            arguments=arguments
+            user_id=user_id, 
+            discussion_id=session_id,
+            history_memory=history_memory
         ):
-            if response_chunk.content:
-                await answer.stream_token(response_chunk.content)
-            # Update thread from the response
-            if response_chunk.thread:
-                thread = response_chunk.thread
-        
-        # Update the history with the new thread
-        history_memory.update_history(user_id, session_id, thread)
+            await answer.stream_token(response_chunk)
         
         # Add the full assistant response to chat history
         chat_history.add_assistant_message(answer.content)
