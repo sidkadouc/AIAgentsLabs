@@ -62,17 +62,28 @@ async def on_message(message: cl.Message):
         full_response = ""
         
         # Stream the response using the agent's get_streaming_response method
-        async for response_chunk in get_streaming_response(
-            messages=message.content, 
-            user_id=user_id, 
-            discussion_id=session_id,
-            history_memory=history_memory
-        ):
-            # Ensure response_chunk is a string
-            if response_chunk:
-                chunk_str = str(response_chunk) if not isinstance(response_chunk, str) else response_chunk
-                await answer.stream_token(chunk_str)
-                full_response += chunk_str
+        try:
+            async for response_chunk in get_streaming_response(
+                messages=message.content, 
+                user_id=user_id, 
+                discussion_id=session_id,
+                history_memory=history_memory
+            ):
+                # Ensure response_chunk is a string
+                if response_chunk:
+                    try:
+                        chunk_str = str(response_chunk) if not isinstance(response_chunk, str) else response_chunk
+                        await answer.stream_token(chunk_str)
+                        full_response += chunk_str
+                    except Exception as chunk_error:
+                        print(f"Error processing chunk: {chunk_error}, chunk type: {type(response_chunk)}")
+                        # Try alternative extraction methods
+                        chunk_str = str(response_chunk)
+                        await answer.stream_token(chunk_str)
+                        full_response += chunk_str
+        except Exception as stream_error:
+            print(f"Streaming error: {stream_error}")
+            raise
         
         # Add the full assistant response to chat history
         chat_history.add_assistant_message(full_response)

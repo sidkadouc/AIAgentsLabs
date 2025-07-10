@@ -133,7 +133,32 @@ async def get_response(messages: str, user_id: str = "default_user", discussion_
         
         async for response_chunk in SUPPORT_AGENT.invoke_stream(messages=messages, thread=thread, arguments=arguments):
             if response_chunk.content:
-                response_content += response_chunk.content
+                # Extract text content properly (same logic as get_streaming_response)
+                content = response_chunk.content
+                
+                # Handle different types of content objects
+                if hasattr(content, '__iter__') and not isinstance(content, str):
+                    # If content is a list or iterable of message objects
+                    text_content = ""
+                    for item in content:
+                        if hasattr(item, 'content'):
+                            text_content += str(item.content)
+                        elif hasattr(item, 'text'):
+                            text_content += str(item.text)
+                        else:
+                            text_content += str(item)
+                    response_content += text_content
+                elif hasattr(content, 'content'):
+                    # If it's a message object with a content attribute
+                    response_content += str(content.content)
+                elif hasattr(content, 'text'):
+                    # If it's a message object with a text attribute
+                    response_content += str(content.text)
+                elif isinstance(content, str):
+                    response_content += content
+                else:
+                    # Convert to string if it's not already a string
+                    response_content += str(content)
             # Keep track of the thread from the last response chunk
             response_thread = response_chunk.thread
         
@@ -190,22 +215,37 @@ async def get_streaming_response(messages: str, user_id: str = "default_user", d
         
         async for response_chunk in SUPPORT_AGENT.invoke_stream(messages=messages, thread=thread, arguments=arguments):
             if response_chunk.content:
-                # Ensure we yield a string content
+                # Debug: Log the type and structure of the content
+                logger.debug(f"Response chunk type: {type(response_chunk.content)}")
+                
+                # Extract text content properly
                 content = response_chunk.content
-                try:
-                    if hasattr(content, 'content'):
-                        # If it's a message object with a content attribute, extract it
-                        content = content.content
-                    elif not isinstance(content, str):
-                        # Convert to string if it's not already a string
-                        content = str(content)
-                    
-                    # Yield each chunk as it arrives
+                
+                # Handle different types of content objects
+                if hasattr(content, '__iter__') and not isinstance(content, str):
+                    # If content is a list or iterable of message objects
+                    text_content = ""
+                    for item in content:
+                        if hasattr(item, 'content'):
+                            text_content += str(item.content)
+                        elif hasattr(item, 'text'):
+                            text_content += str(item.text)
+                        else:
+                            text_content += str(item)
+                    content = text_content
+                elif hasattr(content, 'content'):
+                    # If it's a message object with a content attribute
+                    content = str(content.content)
+                elif hasattr(content, 'text'):
+                    # If it's a message object with a text attribute
+                    content = str(content.text)
+                elif not isinstance(content, str):
+                    # Convert to string if it's not already a string
+                    content = str(content)
+                
+                # Only yield non-empty content
+                if content:
                     yield content
-                except Exception as content_error:
-                    logger.error(f"Error processing content: {content_error}, content type: {type(content)}")
-                    # Fallback to string conversion
-                    yield str(content)
             # Keep track of the thread from the last response chunk
             response_thread = response_chunk.thread
         
