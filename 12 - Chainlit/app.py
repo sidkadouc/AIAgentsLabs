@@ -72,7 +72,7 @@ async def on_chat_start():
     tracer = get_tracer()
     custom_metrics = get_custom_metrics()
     
-    with tracer.start_as_current_span("chat_session.start") as span:
+    with tracer.start_span("chat_session.start") as span:
         load_dotenv()
         
         # Track new session
@@ -130,7 +130,7 @@ async def on_message(message: cl.Message):
     
     start_time = time.time()
     
-    with tracer.start_as_current_span("message.process") as span:
+    with tracer.start_span("message.process") as span:
         span.set_attribute("message_length", len(message.content))
         span.set_attribute("user_id", cl.user_session.get("id", "unknown"))
         
@@ -183,7 +183,7 @@ async def handle_group_chat(message: cl.Message, group_chat, front_desk_name: st
     tracer = get_tracer()
     custom_metrics = get_custom_metrics()
     
-    with tracer.start_as_current_span("group_chat.handle") as span:
+    with tracer.start_span("group_chat.handle") as span:
         span.set_attribute("message_content", message.content[:100])  # First 100 chars
         
         # Send user message with user's avatar
@@ -231,7 +231,7 @@ async def on_chat_end():
     tracer = get_tracer()
     custom_metrics = get_custom_metrics()
     
-    with tracer.start_as_current_span("chat_session.end") as span:
+    with tracer.start_span("chat_session.end") as span:
         # Decrease active sessions count
         custom_metrics['active_sessions'](-1)
         
