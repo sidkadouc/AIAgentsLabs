@@ -30,6 +30,19 @@ from semantic_kernel.contents import AuthorRole, ChatMessageContent
 from semantic_kernel.functions import KernelFunctionFromPrompt
 from group import create_hotel_concierge_group_chat
 
+# Import Azure AD authentication helpers
+from auth import setup_oauth_callback, is_azure_ad_configured
+
+# Load environment variables
+load_dotenv()
+
+# Set up OAuth callback if Azure AD is configured
+if is_azure_ad_configured():
+    setup_oauth_callback()
+    print("Azure AD authentication is enabled")
+else:
+    print("Azure AD authentication is not configured. Set OAUTH_AZURE_AD_CLIENT_ID, OAUTH_AZURE_AD_CLIENT_SECRET, and OAUTH_AZURE_AD_TENANT_ID to enable.")
+
 
 
 request_settings = OpenAIChatPromptExecutionSettings(
@@ -50,6 +63,18 @@ class WeatherPlugin:
 
 @cl.on_chat_start
 async def on_chat_start():
+    # Get user if authenticated, otherwise continue without authentication
+    user = cl.user_session.get("user")
+    
+    # Check if Azure AD is configured and user is authenticated
+    auth_configured = is_azure_ad_configured()
+    
+    if auth_configured and not user:
+        await cl.Message(
+            content="🔐 Azure AD authentication is enabled but you are not logged in. Please authenticate to continue.",
+            author="System"
+        ).send()
+        return
 
     load_dotenv()
     # Setup Semantic Kernel
@@ -87,15 +112,45 @@ async def on_chat_start():
     cl.user_session.set("front_desk_name", front_desk_name)
     cl.user_session.set("concierge_name", concierge_name)
     
+    # Create welcome message
+    if auth_configured and user:
+        # Authenticated user welcome
+        user_name = user.metadata.get("name", "Guest") if user.metadata else "Guest"
+        user_email = user.metadata.get("email", "") if user.metadata else ""
+        
+        welcome_msg = f"🎉 Welcome to the Hotel Concierge Service, {user_name}!"
+        if user_email:
+            welcome_msg += f"\n🔐 Authenticated as: {user_email}"
+        welcome_msg += "\n\nI'll help you get travel recommendations from our agents. Ask about activities or places to visit in any city."
+        
+        auth_status = "✅ Azure AD Authentication: Enabled & Authenticated"
+    elif auth_configured:
+        # Auth enabled but not logged in (shouldn't reach here due to early return)
+        welcome_msg = "🔐 Please authenticate with Azure AD to continue."
+        auth_status = "⚠️ Azure AD Authentication: Enabled but not authenticated"
+    else:
+        # No authentication configured
+        welcome_msg = "🏨 Welcome to the Hotel Concierge Service!\n\nI'll help you get travel recommendations from our agents. Ask about activities or places to visit in any city."
+        auth_status = "ℹ️ Azure AD Authentication: Not configured (running without authentication)"
     
-    # Welcome message
     await cl.Message(
-        content="Welcome to the Hotel Concierge Service! I'll help you get travel recommendations from our agents. Ask about activities or places to visit in any city.",
+        content=f"{welcome_msg}\n\n---\n{auth_status}",
         author="System"
     ).send()
 
 @cl.on_message
 async def on_message(message: cl.Message):
+    # Check authentication if Azure AD is configured
+    auth_configured = is_azure_ad_configured()
+    user = cl.user_session.get("user")
+    
+    if auth_configured and not user:
+        await cl.Message(
+            content="🔐 Authentication required. Please log in to continue.",
+            author="System"
+        ).send()
+        return
+
     kernel = cl.user_session.get("kernel")
     ai_service = cl.user_session.get("ai_service")
     chat_history = cl.user_session.get("chat_history")
